@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Arch Linux OS - iPad Glass Edition</title>
+    <style>
+        :root {
+            --bg-dark: #070a0e;
+            --arch-cyan: #1793d1;
+            --arch-cyan-glow: rgba(23, 147, 209, 0.4);
+            --bar-bg: rgba(13, 17, 23, 0.65);
+            --dock-bg: rgba(18, 24, 33, 0.65);
+            --win-bg: rgba(22, 27, 34, 0.85);
+            --win-border: rgba(255, 255, 255, 0.1);
+            --text-main: #c9d1d9;
+            --accent-green: #7ee787;
+            --accent-red: #ff7b72;
+            --accent-yellow: #ffa657;
+            --font-mono: 'JetBrains Mono', 'Fira Code', 'Courier New', monospace;
+            --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, sans-serif;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; }
+        body, html { width: 100%; height: 100%; overflow: hidden; font-family: var(--font-sans); background: #030508; color: var(--text-main); }
+
+        /* Desktop Canvas */
+        #desktop {
+            width: 100vw; height: 100vh;
+            background: radial-gradient(circle at 50% 30%, #0f1c2e 0%, #04070c 100%);
+            position: relative; overflow: hidden;
+        }
+        
+        /* Arch Background Watermark */
+        .arch-watermark {
+            position: absolute; top: 48%; left: 50%;
+            transform: translate(-50%, -50%);
+            opacity: 0.06; pointer-events: none; width: 380px;
+            filter: drop-shadow(0 0 20px var(--arch-cyan));
+        }
+
+        /* Top Waybar */
+        #waybar {
+            position: absolute; top: 0; left: 0; right: 0; height: 34px;
+            background: var(--bar-bg); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 0 16px; z-index: 9999; font-size: 12px; font-family: var(--font-mono);
+        }
+
+        .bar-section { display: flex; align-items: center; gap: 12px; }
+        .arch-brand {
+            color: var(--arch-cyan); font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 6px;
+            padding: 3px 8px; border-radius: 6px; transition: 0.2s;
+        }
+        .arch-brand:hover { background: rgba(23, 147, 209, 0.2); }
+        
+        .workspaces { display: flex; gap: 4px; }
+        .workspaces span {
+            padding: 2px 8px; border-radius: 6px; background: rgba(255, 255, 255, 0.04);
+            font-size: 11px; cursor: pointer; border: 1px solid transparent; transition: 0.2s;
+        }
+        .workspaces span.active { background: var(--arch-cyan); color: #000; font-weight: bold; }
+        .workspaces span:hover:not(.active) { border-color: rgba(255,255,255,0.2); }
+
+        .sys-badge {
+            background: rgba(255, 255, 255, 0.05); padding: 3px 10px; border-radius: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.08); font-size: 11px; color: #8b949e; display: flex; gap: 5px;
+        }
+        .sys-badge span { color: var(--arch-cyan); font-weight: 600; }
+
+        /* Launcher Menu (App Drawer) */
+        #launcher {
+            position: absolute; bottom: 95px; left: 50%; transform: translateX(-50%); width: 320px;
+            background: rgba(18, 24, 33, 0.85); backdrop-filter: blur(25px); -webkit-backdrop-filter: blur(25px);
+            border: 1px solid rgba(23, 147, 209, 0.3); border-radius: 20px; padding: 14px;
+            display: none; flex-direction: column; gap: 8px; z-index: 10000;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.7), inset 0 1px 0 rgba(255,255,255,0.1);
+            animation: launcherUp 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        @keyframes launcherUp {
+            from { opacity: 0; transform: translate(-50%, 15px) scale(0.95); }
+            to { opacity: 1; transform: translate(-50%, 0) scale(1); }
+        }
+
+        .launcher-title { color: var(--arch-cyan); font-size: 11px; font-family: var(--font-mono); font-weight: bold; letter-spacing: 1px; margin-bottom: 2px; }
+        .launcher-item {
+            padding: 10px 14px; border-radius: 12px; cursor: pointer; display: flex; align-items: center; gap: 12px;
+            transition: all 0.2s; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.03); font-size: 13px;
+        }
+        .launcher-item:hover { background: var(--arch-cyan); color: #000; font-weight: 600; transform: translateX(4px); box-shadow: 0 4px 15px var(--arch-cyan-glow); }
+
+        /* IPAD STYLE FLOATING DOCK */
+        #dock-container {
+            position: absolute; bottom: 18px; left: 50%; transform: translateX(-50%); z-index: 9999;
+        }
+        #dock {
+            background: var(--dock-bg); backdrop-filter: blur(25px); -webkit-backdrop-filter: blur(25px);
+            border: 1px solid rgba(255, 255, 255, 0.12); border-radius: 24px;
+            padding: 8px 14px; display: flex; align-items: center; gap: 10px;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.15);
+        }
+        
+        .dock-divider { width: 1px; height: 28px; background: rgba(255, 255, 255, 0.15); margin: 0 2px; }
+        
+        .dock-icon {
+            width: 46px; height: 46px; border-radius: 14px; background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.08); display: flex; align-items: center; justify-content: center;
+            font-size: 22px; cursor: pointer; position: relative;
+            transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), background 0.2s, box-shadow 0.2s;
+        }
+        .dock-icon:hover {
+            transform: translateY(-10px) scale(1.15); background: rgba(23, 147, 209, 0.25);
+            border-color: var(--arch-cyan); box-shadow: 0 10px 25px var(--arch-cyan-glow);
+        }
+        .dock-icon:active { transform: translateY(-4px) scale(1.05); }
+
+        .dock-launcher {
+            background: rgba(23, 147, 209, 0.15); border-color: rgba(23, 147, 209, 0.3); color: var(--arch-cyan);
+        }
+        .dock-launcher:hover { background: var(--arch-cyan); color: #000; }
+
+        /* Active App Dot Indicator */
+        .dock-icon.running::after {
+            content: ''; position: absolute; bottom: -6px; left: 50%; transform: translateX(-50%);
+            width: 4px; height: 4px; background: var(--arch-cyan); border-radius: 50%;
+            box-shadow: 0 0 8px var(--arch-cyan);
+        }
+
+        /* Window Base */
+        .window {
+            position: absolute; background: var(--win-bg); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+            border: 1px solid var(--win-border); border-radius: 14px; min-width: 320px; min-height: 220px;
+            display: flex; flex-direction: column; box-shadow: 0 15px 35px rgba(0,0,0,0.5); overflow: hidden; z-index: 10;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+        .window.active {
+            border-color: rgba(23, 147, 209, 0.5);
+            box-shadow: 0 10px 40px rgba(0,0,0,0.6), 0 0 20px rgba(23, 147, 209, 0.2);
+        }
+
+        /* Window Header */
+        .win-header {
+            height: 36px; background: rgba(10, 14, 20, 0.6); display: flex; align-items: center; justify-content: space-between;
+            padding: 0 14px; cursor: move; border-bottom: 1px solid rgba(255, 255, 255, 0.05); font-family: var(--font-mono); font-size: 12px;
+        }
+        .win-title { color: var(--arch-cyan); font-weight: bold; letter-spacing: 0.5px; }
+        .win-controls { display: flex; gap: 8px; }
+        .win-btn { width: 12px; height: 12px; border-radius: 50%; cursor: pointer; border: none; transition: 0.2s; }
+        .win-btn:hover { filter: brightness(1.3); transform: scale(1.1); }
+        .btn-close { background: var(--accent-red); }
+        .btn-min { background: var(--accent-yellow); }
+        .btn-max { background: var(--accent-green); }
+
+        /* Window Body */
+        .win-body { flex: 1; overflow: auto; padding: 14px; font-family: var(--font-mono); font-size: 13px; }
+
+        /* Apps UI */
+        .terminal { background: #080b0f; color: #00ff66; height: 100%; line-height: 1.5; white-space: pre-wrap; word-break: break-word; }
+        .term-input-line { display: flex; gap: 8px; align-items: center; margin-top: 6px; }
+        .term-prompt { color: var(--arch-cyan); font-weight: bold; }
+        .term-input { background: transparent; border: none; color: #fff; font-family: var(--font-mono); font-size: 13px; outline: none; flex: 1; }
+
+        .neofetch-container { display: flex; gap: 20px; flex-wrap: wrap; align-items: center; }
+        .ascii-art { color: var(--arch-cyan); font-weight: bold; font-size: 11px; line-height: 1.1; }
+        .spec-list { line-height: 1.6; }
+        .spec-key { color: var(--arch-cyan); font-weight: bold; }
+        .color-palette span { display: inline-block; width: 14px; height: 14px; margin-right: 3px; border-radius: 3px; }
+
+        .stat-card { background: rgba(0,0,0,0.25); padding: 12px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.05); margin-bottom: 12px; }
+        .progress-bar { width: 100%; height: 6px; background: rgba(255,255,255,0.08); border-radius: 3px; overflow: hidden; margin-top: 8px; }
+        .progress-fill { height: 100%; background: var(--arch-cyan); width: 0%; transition: width 0.4s ease; }
+        textarea.editor-input { width: 100%; height: 92%; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.08); color: #fff; font-family: var(--font-mono); padding: 12px; outline: none; resize: none; border-radius: 8px; }
+    </style>
+</head>
+<body>
+
+    <div id="desktop">
+        <!-- Arch Background SVG Watermark -->
+        <svg class="arch-watermark" viewBox="0 0 300 300" fill="none">
+            <path d="M149.8 15L285 285H215L170 190L150 145L130 190L85 285H15L149.8 15Z" fill="#1793d1"/>
+        </svg>
+
+        <!-- Top Waybar -->
+        <div id="waybar">
+            <div class="bar-section">
+                <div class="arch-brand" onclick="toggleLauncher()">
+                    <svg width="14" height="14" viewBox="0 0 300 300" fill="currentColor"><path d="M149.8 15L285 285H215L170 190L150 145L130 190L85 285H15L149.8 15Z"/></svg>
+                    <span>ArchMobile</span>
+                </div>
+                <div class="workspaces">
+                    <span class="active">1:main</span>
+                    <span>2:dev</span>
+                    <span>3:sys</span>
+                </div>
+            </div>
+            <div class="bar-section">
+                <div class="sys-badge">CPU <span id="bar-cpu">0%</span></div>
+                <div class="sys-badge">RAM <span id="bar-ram">0GB</span></div>
+                <div class="sys-badge">BAT <span id="bar-bat">100%</span></div>
+                <div id="clock" style="color:#fff; margin-left:6px; font-weight:600;">00:00:00</div>
+            </div>
+        </div>
+
+        <!-- Launcher Menu (App Drawer) -->
+        <div id="launcher">
+            <div class="launcher-title">APPLICATIONS</div>
+            <div class="launcher-item" onclick="openApp('terminal'); toggleLauncher();">💻 Terminal (Alacritty)</div>
+            <div class="launcher-item" onclick="openApp('neofetch'); toggleLauncher();">ℹ️ System Specs (Fastfetch)</div>
+            <div class="launcher-item" onclick="openApp('btop'); toggleLauncher();">📊 Resource Monitor (btop)</div>
+            <div class="launcher-item" onclick="openApp('editor'); toggleLauncher();">📝 Code Editor (Neovim)</div>
+            <div class="launcher-item" onclick="openApp('files'); toggleLauncher();">📁 File Manager (Thunar)</div>
+        </div>
+
+        <!-- iPad Style Floating Glass Dock -->
+        <div id="dock-container">
+            <div id="dock">
+                <div class="dock-icon dock-launcher" onclick="toggleLauncher()" title="App Drawer">
+                    <svg width="20" height="20" viewBox="0 0 300 300" fill="currentColor"><path d="M149.8 15L285 285H215L170 190L150 145L130 190L85 285H15L149.8 15Z"/></svg>
+                </div>
+                <div class="dock-divider"></div>
+                <div class="dock-icon" id="dock-terminal" onclick="openApp('terminal')" title="Terminal">💻</div>
+                <div class="dock-icon" id="dock-neofetch" onclick="openApp('neofetch')" title="Device Specs">ℹ️</div>
+                <div class="dock-icon" id="dock-btop" onclick="openApp('btop')" title="System Monitor">📊</div>
+                <div class="dock-icon" id="dock-editor" onclick="openApp('editor')" title="Text Editor">📝</div>
+                <div class="dock-icon" id="dock-files" onclick="openApp('files')" title="File Manager">📁</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // System Clock
+        function updateTime() { document.getElementById('clock').innerText = new Date().toLocaleTimeString('id-ID'); }
+        setInterval(updateTime, 1000); updateTime();
+
+        // Toggle App Drawer
+        function toggleLauncher() {
+            const l = document.getElementById('launcher');
+            l.style.display = (l.style.display === 'flex') ? 'none' : 'flex';
+        }
+
+        // Close launcher when desktop is clicked
+        document.getElementById('desktop').addEventListener('mousedown', function(e) {
+            if(e.target.id === 'desktop') document.getElementById('launcher').style.display = 'none';
+        });
+
+        // Hardware Detection Engine
+        function getHardwareSpecs() {
+            const ua = navigator.userAgent;
+            let osName = "Arch Linux Mobile (ARM64)";
+            if (ua.includes("Android")) osName = "Arch Linux ARM (Android Kernel)";
+            else if (ua.includes("iPhone") || ua.includes("iPad")) osName = "Arch Linux Darwin (iOS Subsystem)";
+
+            let gpu = "Generic Mobile GPU";
+            try {
+                const canvas = document.createElement('canvas');
+                const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+                const debugInfo = gl.getExtension('WEBGL_debug_renderer_info');
+                if (debugInfo) gpu = gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL);
+            } catch(e) {}
+
+            return {
+                os: osName, host: navigator.platform + " Glass Workstation", kernel: "6.10.8-arch1-MOBILE",
+                uptime: Math.floor((performance.now() / 1000) / 60) + " mins", shell: "zsh 5.9",
+                res: `${window.screen.width * window.devicePixelRatio}x${window.screen.height * window.devicePixelRatio}`,
+                de: "Hyprland (Wayland)", wm: "Wayfire", cpu: `Mobile ARM SoC (${navigator.hardwareConcurrency || 8} Cores)`, gpu: gpu,
+                memory: navigator.deviceMemory ? navigator.deviceMemory + " GB (Unified)" : "8 GB (Unified)"
+            };
+        }
+
+        // Window Manager Engine
+        let zIndexCounter = 100;
+
+        function createWindow(id, title, contentHTML, width=540, height=360) {
+            // Highlight dock icon as running
+            const dockIcon = document.getElementById(`dock-${id}`);
+            if(dockIcon) dockIcon.classList.add('running');
+
+            if (document.getElementById(`win-${id}`)) {
+                focusWindow(document.getElementById(`win-${id}`));
+                return;
+            }
+
+            const win = document.createElement('div');
+            win.id = `win-${id}`;
+            win.className = 'window active';
+            win.style.width = width + 'px'; win.style.height = height + 'px';
+            
+            const count = document.querySelectorAll('.window').length;
+            win.style.top = (65 + count * 25) + 'px';
+            win.style.left = (30 + count * 25) + 'px';
+            win.style.zIndex = ++zIndexCounter;
+
+            win.innerHTML = `
+                <div class="win-header" onmousedown="dragWindow(event, '${id}')" ontouchstart="dragWindowTouch(event, '${id}')">
+                    <span class="win-title">${title}</span>
+                    <div class="win-controls">
+                        <button class="win-btn btn-min" onclick="closeWindow('${id}')"></button>
+                        <button class="win-btn btn-max" onclick="maximizeWindow('${id}')"></button>
+                        <button class="win-btn btn-close" onclick="closeWindow('${id}')"></button>
+                    </div>
+                </div>
+                <div class="win-body" id="body-${id}">${contentHTML}</div>
+            `;
+
+            win.addEventListener('mousedown', () => focusWindow(win));
+            win.addEventListener('touchstart', () => focusWindow(win), {passive: true});
+            document.getElementById('desktop').appendChild(win);
+        }
+
+        function focusWindow(win) {
+            document.querySelectorAll('.window').forEach(w => w.classList.remove('active'));
+            win.classList.add('active'); win.style.zIndex = ++zIndexCounter;
+        }
+
+        function closeWindow(id) {
+            const win = document.getElementById(`win-${id}`);
+            if (win) {
+                win.remove();
+                // Remove running indicator from dock
+                const dockIcon = document.getElementById(`dock-${id}`);
+                if(dockIcon) dockIcon.classList.remove('running');
+            }
+        }
+
+        function maximizeWindow(id) {
+            const win = document.getElementById(`win-${id}`);
+            if (win.dataset.maximized === "true") {
+                win.style.width = win.dataset.origW; win.style.height = win.dataset.origH;
+                win.style.top = win.dataset.origT; win.style.left = win.dataset.origL;
+                win.dataset.maximized = "false";
+            } else {
+                win.dataset.origW = win.style.width; win.dataset.origH = win.style.height;
+                win.dataset.origT = win.style.top; win.dataset.origL = win.style.left;
+                win.style.width = '100vw'; win.style.height = 'calc(100vh - 34px)';
+                win.style.top = '34px'; win.style.left = '0px';
+                win.dataset.maximized = "true";
+            }
+        }
+
+        // Mouse & Touch Window Dragging
+        function dragWindow(e, id) {
+            const win = document.getElementById(`win-${id}`); focusWindow(win);
+            if(win.dataset.maximized === "true") return;
+            let shiftX = e.clientX - win.getBoundingClientRect().left;
+            let shiftY = e.clientY - win.getBoundingClientRect().top;
+
+            function moveAt(pageX, pageY) { win.style.left = pageX - shiftX + 'px'; win.style.top = pageY - shiftY + 'px'; }
+            function onMouseMove(e) { moveAt(e.pageX, e.pageY); }
+            document.addEventListener('mousemove', onMouseMove);
+            document.onmouseup = function() { document.removeEventListener('mousemove', onMouseMove); document.onmouseup = null; };
+        }
+
+        function dragWindowTouch(e, id) {
+            const win = document.getElementById(`win-${id}`); focusWindow(win);
+            if(win.dataset.maximized === "true") return;
+            const touch = e.touches[0];
+            let shiftX = touch.clientX - win.getBoundingClientRect().left;
+            let shiftY = touch.clientY - win.getBoundingClientRect().top;
+
+            function onTouchMove(e) { const t = e.touches[0]; win.style.left = t.pageX - shiftX + 'px'; win.style.top = t.pageY - shiftY + 'px'; }
+            document.addEventListener('touchmove', onTouchMove, {passive: true});
+            document.ontouchend = function() { document.removeEventListener('touchmove', onTouchMove); document.ontouchend = null; };
+        }
+
+        // App Content Generators
+        function openApp(appName) {
+            if (appName === 'neofetch') {
+                const specs = getHardwareSpecs();
+                const ascii = `
+       /\\
+      /  \\
+     /\\   \\
+    /      \\
+   /   ,,   \\
+  /   |  |  \\
+ /_-''    ''-_\\`;
+                const html = `<div class="neofetch-container"><pre class="ascii-art">${ascii}</pre><div class="spec-list"><div><span style="color:var(--arch-cyan); font-weight:bold;">user</span>@<span style="color:var(--arch-cyan); font-weight:bold;">arch-ipad</span></div><div>-------------------</div><div><span class="spec-key">OS:</span> ${specs.os}</div><div><span class="spec-key">Host:</span> ${specs.host}</div><div><span class="spec-key">Kernel:</span> ${specs.kernel}</div><div><span class="spec-key">Uptime:</span> ${specs.uptime}</div><div><span class="spec-key">Packages:</span> 1420 (pacman), 12 (flatpak)</div><div><span class="spec-key">Shell:</span> ${specs.shell}</div><div><span class="spec-key">Resolution:</span> ${specs.res}</div><div><span class="spec-key">DE:</span> ${specs.de}</div><div><span class="spec-key">WM:</span> ${specs.wm}</div><div><span class="spec-key">CPU:</span> ${specs.cpu}</div><div><span class="spec-key">GPU:</span> ${specs.gpu}</div><div><span class="spec-key">Memory:</span> ${specs.memory}</div><br><div class="color-palette"><span style="background:#000"></span><span style="background:#ff7b72"></span><span style="background:#7ee787"></span><span style="background:#ffa657"></span><span style="background:#1793d1"></span><span style="background:#d2a8ff"></span><span style="background:#a5d6ff"></span><span style="background:#fff"></span></div></div></div>`;
+                createWindow('neofetch', 'fastfetch --device-spec', html, 560, 370);
+            }
+            else if (appName === 'terminal') {
+                const html = `<div class="terminal" id="term-body"><div>Arch Linux 6.10.8-arch1-1-MOBILE (tty1)</div><div>Ketik <b style="color:var(--arch-cyan)">'fastfetch'</b> atau <b style="color:var(--arch-cyan)">'help'</b>.</div><br><div id="term-output"></div><div class="term-input-line"><span class="term-prompt">[user@archmobile ~]$</span><input type="text" class="term-input" id="term-in" onkeydown="handleTermInput(event)" autofocus></div></div>`;
+                createWindow('terminal', 'Alacritty', html, 520, 340);
+            }
+            else if (appName === 'btop') {
+                const html = `<div><div class="stat-card"><div>CPU Utilization (ARM Cluster)</div><div class="progress-bar"><div class="progress-fill" id="btop-cpu-bar"></div></div><small id="btop-cpu-val" style="color:var(--arch-cyan)">0%</small></div><div class="stat-card"><div>RAM Consumption (Unified)</div><div class="progress-bar"><div class="progress-fill" id="btop-ram-bar" style="background:var(--accent-yellow)"></div></div><small id="btop-ram-val" style="color:var(--accent-yellow)">0%</small></div><div class="stat-card"><div>Battery Health & Status</div><div class="progress-bar"><div class="progress-fill" id="btop-bat-bar" style="background:var(--accent-green)"></div></div><small id="btop-bat-val" style="color:var(--accent-green)">100%</small></div></div>`;
+                createWindow('btop', 'btop - Monitor', html, 400, 320);
+            }
+            else if (appName === 'editor') {
+                const html = `<div style="height:100%"><div style="margin-bottom:8px; font-size:12px; color:var(--arch-cyan)">NVIM v0.10 - ~/note.txt</div><textarea class="editor-input" placeholder="# Write shell script or notes here...\n\necho 'Hello Arch Linux iPad Glass Edition'"></textarea></div>`;
+                createWindow('editor', 'Neovim', html, 460, 350);
+            }
+            else if (appName === 'files') {
+                const html = `<div><div style="color:var(--arch-cyan); margin-bottom:15px; background:rgba(0,0,0,0.3); padding:8px 12px; border-radius:8px; border:1px solid rgba(255,255,255,0.05);">/home/user/</div><div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:12px; text-align:center;"><div style="background:rgba(255,255,255,0.04); padding:15px; border-radius:10px; border:1px solid rgba(255,255,255,0.05); cursor:pointer;">📁 Desktop</div><div style="background:rgba(255,255,255,0.04); padding:15px; border-radius:10px; border:1px solid rgba(255,255,255,0.05); cursor:pointer;">📁 Documents</div><div style="background:rgba(255,255,255,0.04); padding:15px; border-radius:10px; border:1px solid rgba(255,255,255,0.05); cursor:pointer;">📁 Downloads</div><div style="background:rgba(255,255,255,0.04); padding:15px; border-radius:10px; border:1px solid rgba(255,255,255,0.05); cursor:pointer;">📄 .zshrc</div><div style="background:rgba(255,255,255,0.04); padding:15px; border-radius:10px; border:1px solid rgba(255,255,255,0.05); cursor:pointer;">📜 script.sh</div></div></div>`;
+                createWindow('files', 'Thunar', html, 460, 290);
+            }
+        }
+
+        // Terminal Command Processing
+        function handleTermInput(e) {
+            if (e.key === 'Enter') {
+                const input = document.getElementById('term-in'); const cmd = input.value.trim(); const out = document.getElementById('term-output');
+                out.innerHTML += `<div><span class="term-prompt">[user@archmobile ~]$</span> ${cmd}</div>`;
+                if (cmd === 'clear') { out.innerHTML = ''; }
+                else if (cmd === 'fastfetch' || cmd === 'neofetch') { const specs = getHardwareSpecs(); out.innerHTML += `<div style="color:var(--arch-cyan)">OS: ${specs.os}\nCPU: ${specs.cpu}\nGPU: ${specs.gpu}\nRAM: ${specs.memory}\nRes: ${specs.res}</div>`; }
+                else if (cmd === 'help') { out.innerHTML += `<div>Perintah: <b>fastfetch</b>, <b>pacman -Syu</b>, <b>uname -a</b>, <b>clear</b></div>`; }
+                else if (cmd.includes('pacman')) { out.innerHTML += `<div>:: Synchronizing package databases...\n core is up to date\n:: Starting full system upgrade...\n nothing to do</div>`; }
+                else if (cmd === 'uname -a') { out.innerHTML += `<div>Linux arch-mobile 6.10.8-arch1-1 ARM64 GNU/Linux</div>`; }
+                else if (cmd !== '') { out.innerHTML += `<div style="color:var(--accent-red)">zsh: command not found: ${cmd}</div>`; }
+                input.value = ''; document.getElementById('body-terminal').scrollTop = document.getElementById('body-terminal').scrollHeight;
+            }
+        }
+
+        // System Resource Simulation Engine
+        setInterval(() => {
+            const cpu = Math.floor(Math.random() * 30) + 5; const ram = (Math.random() * 1.5 + 3.5).toFixed(1);
+            document.getElementById('bar-cpu').innerText = cpu + '%'; document.getElementById('bar-ram').innerText = ram + 'GB';
+            if(document.getElementById('btop-cpu-bar')) { document.getElementById('btop-cpu-bar').style.width = cpu + '%'; document.getElementById('btop-cpu-val').innerText = cpu + '% Usage'; }
+            if(document.getElementById('btop-ram-bar')) { const ramP = Math.floor((ram/8)*100); document.getElementById('btop-ram-bar').style.width = ramP + '%'; document.getElementById('btop-ram-val').innerText = `${ram} GB / 8.0 GB (${ramP}%)`; }
+        }, 2000);
+
+        // Hardware Battery API integration
+        if (navigator.getBattery) {
+            navigator.getBattery().then(bat => {
+                function updateBat() {
+                    const level = Math.floor(bat.level * 100); document.getElementById('bar-bat').innerText = level + '%';
+                    if(document.getElementById('btop-bat-bar')) { document.getElementById('btop-bat-bar').style.width = level + '%'; document.getElementById('btop-bat-val').innerText = `${level}% ${bat.charging ? 'Charging' : 'Discharging'}`; }
+                } updateBat(); bat.addEventListener('levelchange', updateBat);
+            });
+        }
+
+        // Auto open Neofetch on load
+        window.onload = () => { setTimeout(() => openApp('neofetch'), 300); };
+    </script>
+</body>
+</html>
